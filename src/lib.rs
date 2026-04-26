@@ -771,6 +771,7 @@ pub mod shrub {
 pub mod file_manip {
     use std::ffi::OsStr;
     use std::fs::{File, read_dir};
+    use std::io::BufWriter;
     use std::io::{Read, Write};
     use std::path::Path;
 
@@ -877,7 +878,7 @@ pub mod file_manip {
 
             wrapped_path = new_ext.as_path();
 
-            let mut temp_file: File = File::create_new(wrapped_path)
+            let temp_file: File = File::create_new(wrapped_path)
                 .map_err(|_| {
                     return TErrors::FileCreateError;
                 })
@@ -892,14 +893,32 @@ pub mod file_manip {
                         })?,
                 );
 
+            let mut writer = BufWriter::new(temp_file);
+
             for (key, val) in self.get_contents() {
-                let line: String = format!("{}: {}\n", key, val);
-                temp_file
-                    .write_all(line.as_bytes())
+                // Serializa cada par clave-valor como bytes crudos:
+                // [ 4 bytes (u32 LE) = longitud de la clave ]
+                // [ N bytes = clave ]
+                // [ 4 bytes (u32 LE) = longitud del valor ]
+                // [ M bytes = valor ]
+                let key_bytes = key.as_bytes();
+                let val_bytes = val.as_bytes();
+
+                writer
+                    .write_all(&(key_bytes.len() as u32).to_le_bytes())
+                    .map_err(|_| TErrors::WriteBytesError)?;
+                writer
+                    .write_all(key_bytes)
+                    .map_err(|_| TErrors::WriteBytesError)?;
+                writer
+                    .write_all(&(val_bytes.len() as u32).to_le_bytes())
+                    .map_err(|_| TErrors::WriteBytesError)?;
+                writer
+                    .write_all(val_bytes)
                     .map_err(|_| TErrors::WriteBytesError)?;
             }
 
-            temp_file.flush().map_err(|_| TErrors::FlushError)?;
+            writer.flush().map_err(|_| TErrors::FlushError)?;
 
             Ok(())
         }
@@ -1003,24 +1022,57 @@ pub mod file_manip {
             // Abre el .dat por path directamente, evitando el descriptor interno desactualizado
             let mut fresh_file = File::open(&self.path).map_err(|_| TErrors::ReadBytesError)?;
 
-            let mut buffer = String::new();
+            let mut buffer: Vec<u8> = Vec::new();
             fresh_file
-                .read_to_string(&mut buffer)
+                .read_to_end(&mut buffer)
                 .map_err(|_| TErrors::ReadBytesError)?;
 
             if buffer.is_empty() {
                 return Err(TErrors::ContentsEmpty);
             }
 
-            let parsed_content: Vec<(String, String)> = buffer
-                .lines()
-                .filter_map(|line| {
-                    let mut parts = line.splitn(2, ':');
-                    let key = parts.next()?.trim().to_string();
-                    let value = parts.next()?.trim().to_string();
-                    Some((key, value))
-                })
-                .collect();
+            // Deserializa el formato binario:
+            // [ 4 bytes (u32 LE) = longitud de la clave ][ N bytes = clave ]
+            // [ 4 bytes (u32 LE) = longitud del valor  ][ M bytes = valor  ]
+            let mut parsed_content: Vec<(String, String)> = Vec::new();
+            let mut cursor: usize = 0;
+
+            while cursor + 4 <= buffer.len() {
+                // Leer longitud de la clave
+                let key_len = u32::from_le_bytes(
+                    buffer[cursor..cursor + 4]
+                        .try_into()
+                        .map_err(|_| TErrors::ReadBytesError)?,
+                ) as usize;
+                cursor += 4;
+
+                if cursor + key_len > buffer.len() {
+                    break;
+                }
+                let key = String::from_utf8(buffer[cursor..cursor + key_len].to_vec())
+                    .map_err(|_| TErrors::ReadBytesError)?;
+                cursor += key_len;
+
+                if cursor + 4 > buffer.len() {
+                    break;
+                }
+                // Leer longitud del valor
+                let val_len = u32::from_le_bytes(
+                    buffer[cursor..cursor + 4]
+                        .try_into()
+                        .map_err(|_| TErrors::ReadBytesError)?,
+                ) as usize;
+                cursor += 4;
+
+                if cursor + val_len > buffer.len() {
+                    break;
+                }
+                let value = String::from_utf8(buffer[cursor..cursor + val_len].to_vec())
+                    .map_err(|_| TErrors::ReadBytesError)?;
+                cursor += val_len;
+
+                parsed_content.push((key, value));
+            }
 
             self.truncate_contents();
             for (key, value) in parsed_content {
