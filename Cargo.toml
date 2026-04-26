@@ -1,5 +1,5 @@
 [package]
-name = "Injekt"
+name = "injekt"
 version = "0.1.2"
 edition = "2024"
 description = "An app that writes to a .dat file as key, value in a readable format"

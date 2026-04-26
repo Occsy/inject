@@ -1,4 +1,4 @@
-//! # inject
+//! # injekt
 //!
 //! A simple file-based key-value database library.
 //!
@@ -9,7 +9,7 @@
 //! ## Quick start
 //!
 //! ```no_run
-//! use inject::shrub::Instance;
+//! use injekt::shrub::Instance;
 //!
 //! let mut db = Instance::default();
 //!
@@ -22,7 +22,6 @@
 //! db.set_key("name".to_string());
 //! db.delete_pair().unwrap();
 //! ```
-
 pub mod shrub {
     use crate::file_manip::KnownFile;
     use std::path::Path;
@@ -35,7 +34,7 @@ pub mod shrub {
     /// # Example
     ///
     /// ```no_run
-    /// use inject::shrub::{Instance, TErrors};
+    /// use injekt::shrub::{Instance, TErrors};
     ///
     /// let mut db = Instance::default();
     /// db.set_key_value("city".to_string(), "Madrid".to_string());
@@ -82,7 +81,7 @@ pub mod shrub {
     /// # Example
     ///
     /// ```
-    /// use inject::shrub::{Logger, LoggerActions};
+    /// use injekt::shrub::{Logger, LoggerActions};
     ///
     /// let mut logger = Logger::default();
     /// logger.run_logger(
@@ -111,7 +110,7 @@ pub mod shrub {
     /// # Example
     ///
     /// ```
-    /// use inject::shrub::Logger;
+    /// use injekt::shrub::Logger;
     ///
     /// let mut logger = Logger::default();
     /// logger.add_add(("key".to_string(), "value".to_string()));
@@ -130,7 +129,7 @@ pub mod shrub {
         /// # Example
         ///
         /// ```
-        /// use inject::shrub::Logger;
+        /// use injekt::shrub::Logger;
         ///
         /// let logger = Logger::default();
         /// assert!(logger.get_read().is_empty());
@@ -154,7 +153,7 @@ pub mod shrub {
         /// # Example
         ///
         /// ```
-        /// use inject::shrub::Logger;
+        /// use injekt::shrub::Logger;
         ///
         /// let mut logger = Logger::default();
         /// logger.add_read(("name".to_string(), "Alice".to_string()));
@@ -169,7 +168,7 @@ pub mod shrub {
         /// # Example
         ///
         /// ```
-        /// use inject::shrub::Logger;
+        /// use injekt::shrub::Logger;
         ///
         /// let mut logger = Logger::default();
         /// logger.add_add(("age".to_string(), "30".to_string()));
@@ -184,7 +183,7 @@ pub mod shrub {
         /// # Example
         ///
         /// ```
-        /// use inject::shrub::Logger;
+        /// use injekt::shrub::Logger;
         ///
         /// let mut logger = Logger::default();
         /// logger.add_deleted(("city".to_string(), "Madrid".to_string()));
@@ -199,7 +198,7 @@ pub mod shrub {
         /// # Example
         ///
         /// ```
-        /// use inject::shrub::Logger;
+        /// use injekt::shrub::Logger;
         ///
         /// let mut logger = Logger::default();
         /// logger.add_updated(("score".to_string(), "99".to_string()));
@@ -214,7 +213,7 @@ pub mod shrub {
         /// # Example
         ///
         /// ```
-        /// use inject::shrub::Logger;
+        /// use injekt::shrub::Logger;
         ///
         /// let mut logger = Logger::default();
         /// logger.add_read(("name".to_string(), "Alice".to_string()));
@@ -229,7 +228,7 @@ pub mod shrub {
         /// # Example
         ///
         /// ```
-        /// use inject::shrub::Logger;
+        /// use injekt::shrub::Logger;
         ///
         /// let mut logger = Logger::default();
         /// logger.add_add(("name".to_string(), "Alice".to_string()));
@@ -244,7 +243,7 @@ pub mod shrub {
         /// # Example
         ///
         /// ```
-        /// use inject::shrub::Logger;
+        /// use injekt::shrub::Logger;
         ///
         /// let mut logger = Logger::default();
         /// logger.add_deleted(("name".to_string(), "Alice".to_string()));
@@ -259,7 +258,7 @@ pub mod shrub {
         /// # Example
         ///
         /// ```
-        /// use inject::shrub::Logger;
+        /// use injekt::shrub::Logger;
         ///
         /// let mut logger = Logger::default();
         /// logger.add_updated(("name".to_string(), "Bob".to_string()));
@@ -276,7 +275,7 @@ pub mod shrub {
         /// # Example
         ///
         /// ```
-        /// use inject::shrub::{Logger, LoggerActions};
+        /// use injekt::shrub::{Logger, LoggerActions};
         ///
         /// let mut logger = Logger::default();
         /// logger.run_logger(LoggerActions::Deleted, ("name".to_string(), "Alice".to_string()));
@@ -301,7 +300,7 @@ pub mod shrub {
     /// # Example
     ///
     /// ```no_run
-    /// use inject::shrub::Instance;
+    /// use injekt::shrub::Instance;
     ///
     /// let mut db = Instance::default();
     /// db.set_key_value("language".to_string(), "Rust".to_string());
@@ -328,7 +327,7 @@ pub mod shrub {
         /// # Example
         ///
         /// ```no_run
-        /// use inject::shrub::Instance;
+        /// use injekt::shrub::Instance;
         ///
         /// let db = Instance::default();
         /// ```
@@ -353,7 +352,7 @@ pub mod shrub {
         /// # Example
         ///
         /// ```no_run
-        /// use inject::shrub::Instance;
+        /// use injekt::shrub::Instance;
         ///
         /// let mut db = Instance::default();
         /// db.set_key_value("country".to_string(), "Spain".to_string());
@@ -377,7 +376,7 @@ pub mod shrub {
         /// # Example
         ///
         /// ```no_run
-        /// use inject::shrub::Instance;
+        /// use injekt::shrub::Instance;
         ///
         /// let mut db = Instance::default();
         /// db.set_key_value("animal".to_string(), "cat".to_string());
@@ -394,7 +393,7 @@ pub mod shrub {
         /// # Example
         ///
         /// ```no_run
-        /// use inject::shrub::Instance;
+        /// use injekt::shrub::Instance;
         ///
         /// let mut db = Instance::default();
         /// db.set_key("color".to_string());
@@ -409,7 +408,7 @@ pub mod shrub {
         /// # Example
         ///
         /// ```no_run
-        /// use inject::shrub::Instance;
+        /// use injekt::shrub::Instance;
         ///
         /// let mut db = Instance::default();
         /// db.set_value("blue".to_string());
@@ -424,8 +423,8 @@ pub mod shrub {
         /// # Example
         ///
         /// ```no_run
-        /// use inject::shrub::Instance;
-        /// use inject::file_manip::KnownFile;
+        /// use injekt::shrub::Instance;
+        /// use injekt::file_manip::KnownFile;
         ///
         /// let mut db = Instance::default();
         /// let new_file = KnownFile { path: "./other.dat".to_string(), content: Vec::new() };
@@ -443,7 +442,7 @@ pub mod shrub {
         /// # Example
         ///
         /// ```no_run
-        /// use inject::shrub::Instance;
+        /// use injekt::shrub::Instance;
         ///
         /// let mut db = Instance::default();
         /// db.set_log(false);
@@ -458,7 +457,7 @@ pub mod shrub {
         /// # Example
         ///
         /// ```no_run
-        /// use inject::shrub::Instance;
+        /// use injekt::shrub::Instance;
         ///
         /// let db = Instance::default();
         /// assert_eq!(db.get_log(), true); // logging is on by default
@@ -472,7 +471,7 @@ pub mod shrub {
         /// # Example
         ///
         /// ```no_run
-        /// use inject::shrub::{Instance, Logger};
+        /// use injekt::shrub::{Instance, Logger};
         ///
         /// let mut db = Instance::default();
         /// let fresh_logger = Logger::default();
@@ -487,7 +486,7 @@ pub mod shrub {
         /// # Example
         ///
         /// ```no_run
-        /// use inject::shrub::Instance;
+        /// use injekt::shrub::Instance;
         ///
         /// let mut db = Instance::default();
         /// db.set_key_value("x".to_string(), "1".to_string());
@@ -510,7 +509,7 @@ pub mod shrub {
         /// # Example
         ///
         /// ```no_run
-        /// use inject::shrub::Instance;
+        /// use injekt::shrub::Instance;
         ///
         /// let mut db = Instance::default();
         /// db.set_key("planet".to_string());
@@ -525,7 +524,7 @@ pub mod shrub {
         /// # Example
         ///
         /// ```no_run
-        /// use inject::shrub::Instance;
+        /// use injekt::shrub::Instance;
         ///
         /// let mut db = Instance::default();
         /// db.set_value("Earth".to_string());
@@ -544,7 +543,7 @@ pub mod shrub {
         /// # Example
         ///
         /// ```no_run
-        /// use inject::shrub::Instance;
+        /// use injekt::shrub::Instance;
         ///
         /// let db = Instance::default();
         /// let file = db.get_file();
@@ -572,7 +571,7 @@ pub mod shrub {
         /// # Example
         ///
         /// ```no_run
-        /// use inject::shrub::Instance;
+        /// use injekt::shrub::Instance;
         ///
         /// let mut db = Instance::default();
         /// db.set_key_value("fruit".to_string(), "apple".to_string());
@@ -612,7 +611,7 @@ pub mod shrub {
         /// # Example
         ///
         /// ```no_run
-        /// use inject::shrub::Instance;
+        /// use injekt::shrub::Instance;
         ///
         /// let mut db = Instance::default();
         /// db.read_data().unwrap();
@@ -674,7 +673,7 @@ pub mod shrub {
         /// # Example
         ///
         /// ```no_run
-        /// use inject::shrub::Instance;
+        /// use injekt::shrub::Instance;
         ///
         /// let mut db = Instance::default();
         ///
@@ -734,7 +733,7 @@ pub mod shrub {
         /// # Example
         ///
         /// ```no_run
-        /// use inject::shrub::Instance;
+        /// use injekt::shrub::Instance;
         ///
         /// let mut db = Instance::default();
         ///
@@ -786,7 +785,7 @@ pub mod file_manip {
     /// # Example
     ///
     /// ```no_run
-    /// use inject::shrub::Instance;
+    /// use injekt::shrub::Instance;
     ///
     /// let mut db = Instance::default();
     /// db.set_key_value("hello".to_string(), "world".to_string());
@@ -811,7 +810,7 @@ pub mod file_manip {
         /// # Example
         ///
         /// ```no_run
-        /// use inject::shrub::Instance;
+        /// use injekt::shrub::Instance;
         ///
         /// let db = Instance::default();
         /// assert_eq!(db.get_file().get_path(), "./default.dat");
@@ -837,7 +836,7 @@ pub mod file_manip {
         /// # Example
         ///
         /// ```no_run
-        /// use inject::shrub::Instance;
+        /// use injekt::shrub::Instance;
         ///
         /// let db = Instance::default();
         /// db.get_file().blank().unwrap(); // file is now removed from disk
@@ -851,7 +850,7 @@ pub mod file_manip {
         /// # Example
         ///
         /// ```
-        /// use inject::file_manip::KnownFile;
+        /// use injekt::file_manip::KnownFile;
         ///
         /// let mut kf = KnownFile { path: "./data.dat".to_string(), content: Vec::new() };
         /// kf.append_contents("a".to_string(), "1".to_string());
@@ -956,7 +955,7 @@ pub mod file_manip {
         /// # Example
         ///
         /// ```no_run
-        /// use inject::shrub::Instance;
+        /// use injekt::shrub::Instance;
         ///
         /// let mut db = Instance::default();
         /// db.set_key_value("key".to_string(), "value".to_string());
@@ -989,7 +988,7 @@ pub mod file_manip {
         /// # Example
         ///
         /// ```no_run
-        /// use inject::shrub::Instance;
+        /// use injekt::shrub::Instance;
         ///
         /// let mut db = Instance::default();
         /// db.set_key_value("lang".to_string(), "Rust".to_string());
@@ -1036,7 +1035,7 @@ pub mod file_manip {
         /// # Example
         ///
         /// ```
-        /// use inject::file_manip::KnownFile;
+        /// use injekt::file_manip::KnownFile;
         ///
         /// let kf = KnownFile { path: "./mydb.dat".to_string(), content: Vec::new() };
         /// assert_eq!(kf.get_path(), "./mydb.dat");
@@ -1052,7 +1051,7 @@ pub mod file_manip {
         /// # Example
         ///
         /// ```
-        /// use inject::file_manip::KnownFile;
+        /// use injekt::file_manip::KnownFile;
         ///
         /// let mut kf = KnownFile { path: "./old.dat".to_string(), content: Vec::new() };
         /// kf.set_path("./new.dat".to_string());
@@ -1067,7 +1066,7 @@ pub mod file_manip {
         /// # Example
         ///
         /// ```
-        /// use inject::file_manip::KnownFile;
+        /// use injekt::file_manip::KnownFile;
         ///
         /// let mut kf = KnownFile { path: "./data.dat".to_string(), content: Vec::new() };
         /// kf.append_contents("a".to_string(), "1".to_string());
@@ -1082,7 +1081,7 @@ pub mod file_manip {
         /// # Example
         ///
         /// ```
-        /// use inject::file_manip::KnownFile;
+        /// use injekt::file_manip::KnownFile;
         ///
         /// let mut kf = KnownFile { path: "./data.dat".to_string(), content: Vec::new() };
         /// kf.set_contents(vec![("x".to_string(), "10".to_string())]);
@@ -1099,7 +1098,7 @@ pub mod file_manip {
         /// # Example
         ///
         /// ```
-        /// use inject::file_manip::KnownFile;
+        /// use injekt::file_manip::KnownFile;
         ///
         /// let mut kf = KnownFile { path: "./data.dat".to_string(), content: Vec::new() };
         /// kf.append_contents("version".to_string(), "1.0".to_string());
@@ -1121,7 +1120,7 @@ pub mod file_manip {
         /// # Example
         ///
         /// ```
-        /// use inject::file_manip::KnownFile;
+        /// use injekt::file_manip::KnownFile;
         ///
         /// let mut kf = KnownFile { path: "./data.dat".to_string(), content: Vec::new() };
         /// kf.append_contents("keep".to_string(), "this".to_string());
@@ -1157,7 +1156,7 @@ pub mod file_manip {
         /// # Example
         ///
         /// ```
-        /// use inject::file_manip::KnownFile;
+        /// use injekt::file_manip::KnownFile;
         ///
         /// let mut kf = KnownFile { path: "./data.dat".to_string(), content: Vec::new() };
         /// kf.append_contents("score".to_string(), "10".to_string());

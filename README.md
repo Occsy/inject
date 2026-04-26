@@ -1,4 +1,4 @@
-# inject
+# injekt
 
 A simple, file-based key-value database library for Rust.
 
@@ -22,7 +22,7 @@ Add the following to your `Cargo.toml`:
 
 ```toml
 [dependencies]
-inject = { version = "0.1.0" }
+injekt = { version = "0.1.0" }
 ```
 
 ---
@@ -30,7 +30,7 @@ inject = { version = "0.1.0" }
 ## Quick Start
 
 ```rust
-use inject::shrub::Instance;
+use injekt::shrub::Instance;
 
 fn main() {
     let mut db = Instance::default(); // uses ./default.dat
@@ -135,7 +135,7 @@ All fallible methods return `Result<(), TErrors>`. The full list of error varian
 ### Writing multiple pairs
 
 ```rust
-use inject::shrub::Instance;
+use injekt::shrub::Instance;
 
 let mut db = Instance::default();
 
@@ -154,7 +154,7 @@ for (key, value) in pairs {
 ### Reading the database back from disk
 
 ```rust
-use inject::shrub::Instance;
+use injekt::shrub::Instance;
 
 let mut db = Instance::default();
 db.read_data().unwrap();
@@ -167,7 +167,7 @@ for (key, value) in db.get_file().get_contents() {
 ### Using the logger
 
 ```rust
-use inject::shrub::Instance;
+use injekt::shrub::Instance;
 
 let mut db = Instance::default();
 
@@ -185,7 +185,7 @@ println!("Updated: {:?}", logger.get_updated());
 ### Disabling the logger
 
 ```rust
-use inject::shrub::Instance;
+use injekt::shrub::Instance;
 
 let mut db = Instance::default();
 db.set_log(false);
@@ -198,7 +198,7 @@ db.write_pair().unwrap();
 ### Error handling
 
 ```rust
-use inject::shrub::{Instance, TErrors};
+use injekt::shrub::{Instance, TErrors};
 
 let mut db = Instance::default();
 db.set_key_value("city".to_string(), "Madrid".to_string());
