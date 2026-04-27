@@ -2,14 +2,13 @@
 
 A simple, file-based key-value database library for Rust.
 
-Data is stored in plain-text `.dat` files in the format `key: value`.  
-All write operations go through a `.tmp` file first and are then atomically renamed to `.dat`, ensuring the database is never left in a corrupt state.
+Data is stored in `.dat` files using a compact binary format: each entry is encoded as a 4-byte little-endian key length, the key bytes, a 4-byte little-endian value length, and the value bytes. All write operations go through a `.tmp` file first and are then atomically renamed to `.dat`, ensuring the database is never left in a corrupt state.
 
 ---
 
 ## Features
 
-- Plain-text `.dat` file storage — human readable and easy to inspect
+- Binary `.dat` file storage — compact and crash-safe
 - Atomic writes via `.tmp` → `.dat` rename
 - Built-in logger that tracks every read, write, update, and delete operation
 - Simple API through a single `Instance` struct
@@ -22,7 +21,7 @@ Add the following to your `Cargo.toml`:
 
 ```toml
 [dependencies]
-injekt = { version = "0.1.0" }
+injekt = { version = "1.0.1" }
 ```
 
 ---
@@ -63,6 +62,7 @@ The main entry point for all database operations.
 | `set_key_value(key, value)` | Sets the active key and value |
 | `set_key(key)` | Sets only the active key |
 | `set_value(value)` | Sets only the active value |
+| `kv_to_contents()` | Appends the active key-value pair to the in-memory content (does not write to disk) |
 | `write_pair()` | Writes the active key-value pair to disk (skips if key exists) |
 | `update_pair()` | Updates an existing key, or inserts it if it does not exist |
 | `delete_pair()` | Deletes the entry matching the active key |
@@ -70,6 +70,11 @@ The main entry point for all database operations.
 | `get_key()` | Returns a copy of the active key |
 | `get_value()` | Returns a copy of the active value |
 | `get_file()` | Returns a snapshot of the underlying `KnownFile` |
+| `set_file(file)` | Replaces the underlying `KnownFile` |
+| `get_file_path()` | Returns the file path from the underlying `KnownFile` |
+| `set_file_path(path)` | Sets the file path on the underlying `KnownFile` (does not move the file on disk) |
+| `get_file_content()` | Returns a clone of the in-memory content vector |
+| `set_file_content(vec)` | Replaces the in-memory content vector directly |
 | `set_log(bool)` | Enables or disables operation logging |
 | `get_log()` | Returns whether logging is enabled |
 | `get_logger()` | Returns a snapshot of the internal `Logger` |
@@ -87,6 +92,10 @@ Tracks every operation performed during a session, separated by type.
 | `get_added()` | Returns all pairs that were added |
 | `get_deleted()` | Returns all pairs that were deleted |
 | `get_updated()` | Returns all pairs that were updated |
+| `add_read(pair)` | Records a pair as having been read |
+| `add_add(pair)` | Records a pair as having been added |
+| `add_deleted(pair)` | Records a pair as having been deleted |
+| `add_updated(pair)` | Records a pair as having been updated |
 | `run_logger(action, pair)` | Routes a pair into the correct log bucket |
 
 ---
@@ -214,15 +223,18 @@ match db.write_pair() {
 
 ## File Format
 
-The `.dat` files are plain text, one entry per line:
+Each `.dat` file stores records in a binary length-prefixed format. For every key-value pair, the following bytes are written in order:
 
-```
-username: alice
-language: Rust
-version: 1.0
-```
+| Field | Size | Description |
+|-------|------|-------------|
+| Key length | 4 bytes | Number of bytes in the key, encoded as a u32 (little-endian) |
+| Key | N bytes | Key string encoded as UTF-8 |
+| Value length | 4 bytes | Number of bytes in the value, encoded as a u32 (little-endian) |
+| Value | M bytes | Value string encoded as UTF-8 |
 
-This makes them easy to inspect, edit manually, or migrate to other formats.
+Records are written back-to-back with no separator. This format is intentionally simple and allows the parser to read any record in a single sequential pass.
+
+All writes go through an intermediate `.tmp` file that is atomically renamed to `.dat` upon completion, so the database file is never partially written even if the process crashes mid-write.
 
 ---
 

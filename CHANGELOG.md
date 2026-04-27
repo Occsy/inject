@@ -7,6 +7,30 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ---
 
+## [1.0.1] - 2026-04-27
+
+### Fixed
+
+- Corrected all documentation that described `.dat` files as plain-text `key: value` — the actual storage format is binary length-prefixed records
+- Fixed a typo in the `Logger::run_logger` doc comment (`"a enience wrapper"` → `"a convenience wrapper"`)
+- Translated all Spanish inline comments in `file_manip` (`run_temp`, `read_file`, `KnownFile::init`) to English
+
+### Changed
+
+- Updated `README.md` installation version from `0.1.0` to `1.0.1`
+- Updated `README.md` features section: replaced `"Plain-text .dat file storage — human readable and easy to inspect"` with `"Binary .dat file storage — compact and crash-safe"`
+- Rewrote `README.md` File Format section to accurately describe the binary length-prefixed record layout (u32 key length + key bytes + u32 value length + value bytes, all little-endian)
+- Updated `run_temp` and `read_file` doc comments to describe the binary format instead of the old `key: value\n` plain-text format
+- Updated the crate-level `//!` doc to describe the binary storage format
+
+### Added
+
+- Added `///` doc comments (with `# Example` sections) to four previously undocumented public `Instance` methods: `set_file_path`, `set_file_content`, `get_file_path`, `get_file_content`
+- Added missing `Instance` methods to the `README.md` API table: `kv_to_contents`, `set_file`, `get_file_path`, `set_file_path`, `get_file_content`, `set_file_content`
+- Added missing `Logger` mutation methods to the `README.md` API table: `add_read`, `add_add`, `add_deleted`, `add_updated`
+
+---
+
 ## [0.1.0] - 2026-04-24
 
 ### Added

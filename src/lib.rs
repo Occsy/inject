@@ -2,9 +2,10 @@
 //!
 //! A simple file-based key-value database library.
 //!
-//! Data is stored in `.dat` files as plain text lines in the format `key: value`.
-//! All write operations go through a `.tmp` file first and are then atomically
-//! renamed to `.dat`, ensuring the database is never left in a corrupt state.
+//! Data is stored in `.dat` files in a compact binary format: each entry is written as
+//! a 4-byte little-endian key length, the key bytes, a 4-byte little-endian value length,
+//! and the value bytes. All write operations go through a `.tmp` file first and are then
+//! atomically renamed to `.dat`, ensuring the database is never left in a corrupt state.
 //!
 //! ## Quick start
 //!
@@ -270,7 +271,7 @@ pub mod shrub {
 
         /// Routes a key-value pair into the correct log bucket based on `logger_action`.
         ///
-        /// This is a enience wrapper around the individual `add_*` methods.
+        /// This is a convenience wrapper around the individual `add_*` methods.
         ///
         /// # Example
         ///
@@ -416,6 +417,74 @@ pub mod shrub {
         /// ```
         pub fn set_value(&mut self, value: String) {
             self.value = value;
+        }
+
+        /// Sets the file path directly on the underlying [`KnownFile`].
+        ///
+        /// This is a lower-level alternative to [`Instance::set_file`] when only the path
+        /// needs to change. Note: changing the path does **not** move the file on disk.
+        ///
+        /// # Example
+        ///
+        /// ```no_run
+        /// use injekt::shrub::Instance;
+        ///
+        /// let mut db = Instance::default();
+        /// db.set_file_path("./other.dat".to_string());
+        /// assert_eq!(db.get_file_path(), "./other.dat");
+        /// ```
+        pub fn set_file_path(&mut self, path: String) {
+            self.file.path = path;
+        }
+
+        /// Replaces the in-memory content of the underlying [`KnownFile`] directly.
+        ///
+        /// This does **not** write to disk. Use [`Instance::write_pair`] or
+        /// [`Instance::update_pair`] to persist changes.
+        ///
+        /// # Example
+        ///
+        /// ```no_run
+        /// use injekt::shrub::Instance;
+        ///
+        /// let mut db = Instance::default();
+        /// db.set_file_content(vec![("key".to_string(), "value".to_string())]);
+        /// assert_eq!(db.get_file_content().len(), 1);
+        /// ```
+        pub fn set_file_content(&mut self, content: Vec<(String, String)>) {
+            self.file.content = content;
+        }
+
+        /// Returns a copy of the file path stored in the underlying [`KnownFile`].
+        ///
+        /// # Example
+        ///
+        /// ```no_run
+        /// use injekt::shrub::Instance;
+        ///
+        /// let db = Instance::default();
+        /// assert_eq!(db.get_file_path(), "./default.dat");
+        /// ```
+        pub fn get_file_path(&self) -> String {
+            self.file.path.to_string()
+        }
+
+        /// Returns a clone of the in-memory content vector from the underlying [`KnownFile`].
+        ///
+        /// Each element is a `(key, value)` tuple. The vector reflects the last state loaded
+        /// from disk (via [`Instance::read_data`]) plus any pending in-memory changes.
+        ///
+        /// # Example
+        ///
+        /// ```no_run
+        /// use injekt::shrub::Instance;
+        ///
+        /// let mut db = Instance::default();
+        /// db.set_file_content(vec![("lang".to_string(), "Rust".to_string())]);
+        /// assert_eq!(db.get_file_content()[0].0, "lang");
+        /// ```
+        pub fn get_file_content(&self) -> Vec<(String, String)> {
+            self.file.content.clone()
         }
 
         /// Replaces the underlying [`KnownFile`] with a new one.
@@ -818,7 +887,7 @@ pub mod file_manip {
         /// assert!(db.get_file().get_contents().is_empty());
         /// ```
         pub(crate) fn init(path: String) -> Result<Self, TErrors> {
-            // Crea el archivo si no existe, de lo contrario no hace nada
+            // Create the file only if it does not already exist; otherwise leave it untouched.
             if !std::path::Path::new(&path).exists() {
                 File::create_new(&path).map_err(|_| TErrors::FileCreateError)?;
             }
@@ -864,9 +933,14 @@ pub mod file_manip {
 
         /// Writes the current in-memory content to a `.tmp` file alongside the `.dat`.
         ///
-        /// Each entry is serialised as `key: value\n`. The `.tmp` file is created
-        /// fresh (or truncated if it already exists) so that a crash mid-write
-        /// leaves the original `.dat` intact.
+        /// Each entry is serialised in a binary length-prefixed format:
+        /// - 4 bytes (u32, little-endian): byte length of the key
+        /// - N bytes: key encoded as UTF-8
+        /// - 4 bytes (u32, little-endian): byte length of the value
+        /// - M bytes: value encoded as UTF-8
+        ///
+        /// The `.tmp` file is created fresh (or truncated if it already exists) so that
+        /// a crash mid-write leaves the original `.dat` intact.
         ///
         /// # Errors
         ///
@@ -896,11 +970,7 @@ pub mod file_manip {
             let mut writer = BufWriter::new(temp_file);
 
             for (key, val) in self.get_contents() {
-                // Serializa cada par clave-valor como bytes crudos:
-                // [ 4 bytes (u32 LE) = longitud de la clave ]
-                // [ N bytes = clave ]
-                // [ 4 bytes (u32 LE) = longitud del valor ]
-                // [ M bytes = valor ]
+                // Serialise each key-value pair in binary length-prefixed format.
                 let key_bytes = key.as_bytes();
                 let val_bytes = val.as_bytes();
 
@@ -996,8 +1066,10 @@ pub mod file_manip {
         ///
         /// The file is opened fresh by path on every call, so the result always
         /// reflects the current state on disk regardless of previous writes.
-        /// Each line is parsed as `key: value`; lines that do not match this
-        /// format are silently skipped.
+        /// The file is parsed using the binary length-prefixed format written by
+        /// [`KnownFile::run_temp`]: each record is a u32 key-length, the key bytes,
+        /// a u32 value-length, and the value bytes (all little-endian). Truncated or
+        /// malformed records at the end of the buffer are silently ignored.
         ///
         /// # Errors
         ///
@@ -1019,7 +1091,7 @@ pub mod file_manip {
         /// assert_eq!(db2.get_file().get_contents()[0].0, "lang");
         /// ```
         pub(crate) fn read_file(&mut self) -> Result<(), TErrors> {
-            // Abre el .dat por path directamente, evitando el descriptor interno desactualizado
+            // Open the .dat file fresh by path to avoid stale handles after atomic renames.
             let mut fresh_file = File::open(&self.path).map_err(|_| TErrors::ReadBytesError)?;
 
             let mut buffer: Vec<u8> = Vec::new();
@@ -1031,14 +1103,12 @@ pub mod file_manip {
                 return Err(TErrors::ContentsEmpty);
             }
 
-            // Deserializa el formato binario:
-            // [ 4 bytes (u32 LE) = longitud de la clave ][ N bytes = clave ]
-            // [ 4 bytes (u32 LE) = longitud del valor  ][ M bytes = valor  ]
+            // Deserialise the binary length-prefixed format.
             let mut parsed_content: Vec<(String, String)> = Vec::new();
             let mut cursor: usize = 0;
 
             while cursor + 4 <= buffer.len() {
-                // Leer longitud de la clave
+                // Read the key length prefix.
                 let key_len = u32::from_le_bytes(
                     buffer[cursor..cursor + 4]
                         .try_into()
@@ -1056,7 +1126,7 @@ pub mod file_manip {
                 if cursor + 4 > buffer.len() {
                     break;
                 }
-                // Leer longitud del valor
+                // Read the value length prefix.
                 let val_len = u32::from_le_bytes(
                     buffer[cursor..cursor + 4]
                         .try_into()
