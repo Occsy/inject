@@ -21,7 +21,7 @@ Add the following to your `Cargo.toml`:
 
 ```toml
 [dependencies]
-injekt = { version = "1.0.1" }
+injekt = { version = "1.0.2" }
 ```
 
 ---
@@ -75,6 +75,8 @@ The main entry point for all database operations.
 | `set_file_path(path)` | Sets the file path on the underlying `KnownFile` (does not move the file on disk) |
 | `get_file_content()` | Returns a clone of the in-memory content vector |
 | `set_file_content(vec)` | Replaces the in-memory content vector directly |
+| `file_blank()` | Deletes the database file from disk (in-memory content is not cleared) |
+| `write_file_contents()` | Persists every entry in the in-memory content to disk via `write_pair`, skipping duplicates |
 | `set_log(bool)` | Enables or disables operation logging |
 | `get_log()` | Returns whether logging is enabled |
 | `get_logger()` | Returns a snapshot of the internal `Logger` |

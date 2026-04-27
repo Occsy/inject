@@ -7,6 +7,21 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ---
 
+## [1.0.2] - 2026-04-27
+
+### Added
+
+- `shrub::Instance::file_blank()` — convenience wrapper around `KnownFile::blank()` that deletes the database file from disk directly through the instance; returns `TErrors::FileIOError` on failure
+- `shrub::Instance::write_file_contents()` — persists the current in-memory content to disk by iterating over the content vector and calling `write_pair()` for each entry; if the active key is non-empty it is appended to the buffer before the loop so it is included in the write
+
+### Changed
+
+- Added `///` doc comments (with `# Errors` and `# Example` sections) to `file_blank` and `write_file_contents`, which were previously undocumented
+- Added `file_blank` and `write_file_contents` to the `Instance` API table in `README.md`
+- Updated installation version in `README.md` from `1.0.1` to `1.0.2`
+
+---
+
 ## [1.0.1] - 2026-04-27
 
 ### Fixed

@@ -487,6 +487,80 @@ pub mod shrub {
             self.file.content.clone()
         }
 
+        /// Deletes the database file at the current path from disk.
+        ///
+        /// This is a convenience wrapper around [`KnownFile::blank`] that operates
+        /// directly on the file managed by this instance. The in-memory content is
+        /// **not** cleared; call [`Instance::set_file_content`] or
+        /// [`Instance::get_file`] / [`Instance::set_file`] to reset it separately.
+        ///
+        /// # Errors
+        ///
+        /// Returns [`TErrors::FileIOError`] if the file cannot be removed (for example,
+        /// if it does not exist or the process lacks permission).
+        ///
+        /// # Example
+        ///
+        /// ```no_run
+        /// use injekt::shrub::Instance;
+        ///
+        /// let mut db = Instance::default();
+        /// db.set_key_value("temp".to_string(), "data".to_string());
+        /// db.write_pair().unwrap();
+        ///
+        /// // Remove the file from disk entirely
+        /// db.file_blank().unwrap();
+        /// ```
+        pub fn file_blank(&mut self) -> Result<(), TErrors> {
+            self.file.blank()
+        }
+
+        /// Persists the current in-memory content to disk by calling [`Instance::write_pair`]
+        /// for each entry in the content vector.
+        ///
+        /// If the active key is non-empty it is appended to the in-memory buffer before
+        /// the loop begins, so it will be included in the write when the file does not yet
+        /// exist on disk. Because [`Instance::write_pair`] internally calls
+        /// [`Instance::read_data`] (which reloads content from disk when the file already
+        /// exists), duplicate keys are automatically skipped for each entry.
+        ///
+        /// # Errors
+        ///
+        /// Returns [`TErrors`] if any individual [`Instance::write_pair`] call fails.
+        ///
+        /// # Example
+        ///
+        /// ```no_run
+        /// use injekt::shrub::Instance;
+        ///
+        /// let mut db = Instance::default();
+        ///
+        /// // Stage multiple pairs in memory
+        /// db.set_file_content(vec![
+        ///     ("username".to_string(), "alice".to_string()),
+        ///     ("language".to_string(), "Rust".to_string()),
+        /// ]);
+        ///
+        /// // Write them all to disk in one call
+        /// db.write_file_contents().unwrap();
+        /// ```
+        pub fn write_file_contents(&mut self) -> Result<(), TErrors> {
+            let mut counter = 0;
+            let content: Vec<(String, String)> = self.get_file_content();
+
+            if !self.get_key().is_empty() {
+                self.file.content.push((self.get_key(), self.get_value()));
+            }
+
+            while counter < content.len() {
+                self.set_key_value(content[counter].0.clone(), content[counter].1.clone());
+                self.write_pair()?;
+                counter += 1;
+            }
+
+            Ok(())
+        }
+
         /// Replaces the underlying [`KnownFile`] with a new one.
         ///
         /// # Example
