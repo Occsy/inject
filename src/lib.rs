@@ -545,18 +545,18 @@ pub mod shrub {
         /// db.write_file_contents().unwrap();
         /// ```
         pub fn write_file_contents(&mut self) -> Result<(), TErrors> {
-            let mut counter = 0;
-            let content: Vec<(String, String)> = self.get_file_content();
-
             if !self.get_key().is_empty() {
                 self.file.content.push((self.get_key(), self.get_value()));
             }
 
-            while counter < content.len() {
-                self.set_key_value(content[counter].0.clone(), content[counter].1.clone());
-                self.write_pair()?;
-                counter += 1;
-            }
+            self.get_file_content().into_iter().for_each(|f| {
+                self.set_key_value(f.0.clone(), f.1.clone());
+                self.write_pair()
+                    .map_err(|_| {
+                        return TErrors::FileIOError;
+                    })
+                    .unwrap();
+            });
 
             Ok(())
         }
