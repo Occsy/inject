@@ -788,14 +788,10 @@ pub mod shrub {
         /// keys parsed from disk (which may have surrounding spaces) are matched
         /// correctly.
         fn search_vec(&self) -> bool {
-            let mut exists: bool = false;
-            for (x, _y) in self.file.get_contents().iter() {
-                exists = Self::trim_str(x.clone()) == Self::trim_str(self.get_key());
-                if exists == true {
-                    break;
-                }
-            }
-            exists
+            self.file
+                .get_contents()
+                .iter()
+                .any(|(x, _y)| Self::trim_str(x.clone()) == Self::trim_str(self.get_key()))
         }
 
         /// Trims leading and trailing whitespace from a `String`.
