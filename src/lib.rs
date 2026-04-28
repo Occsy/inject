@@ -43,9 +43,10 @@ pub mod shrub {
     /// match db.write_pair() {
     ///     Ok(()) => println!("Written successfully"),
     ///     Err(TErrors::FileCreateError) => eprintln!("Could not create the file"),
-    ///     Err(e) => eprintln!("Unexpected error: {e:?}"),
+    ///     Err(e) => eprintln!("Unexpected error: {e}"),
     /// }
     /// ```
+    #[non_exhaustive]
     #[derive(Debug, PartialEq)]
     pub enum TErrors {
         /// The file exists but contains no data.
@@ -54,8 +55,6 @@ pub mod shrub {
         ReadBytesError,
         /// Failed to write bytes to the file.
         WriteBytesError,
-        /// Failed to clone a file handle.
-        FileCloneError,
         /// A key index lookup returned no result.
         IndexError,
         /// A general file I/O error occurred.
@@ -64,8 +63,6 @@ pub mod shrub {
         FileCreateError,
         /// Failed to flush the file buffer.
         FlushError,
-        /// Failed to read the working directory.
-        DirError,
         /// Failed to create the temporary `.tmp` file.
         TempCreate,
         /// Failed to replace the `.tmp` file with the `.dat` file.
@@ -73,6 +70,30 @@ pub mod shrub {
         /// Failed to rename a file.
         RenameError,
     }
+
+    impl std::fmt::Display for TErrors {
+        fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+            match self {
+                Self::ContentsEmpty => write!(f, "database file exists but contains no data"),
+                Self::ReadBytesError => write!(f, "failed to read from the database file"),
+                Self::WriteBytesError => write!(f, "failed to write to the database file"),
+
+                Self::IndexError => write!(f, "key not found in the database"),
+                Self::FileIOError => write!(f, "a file I/O error occurred"),
+                Self::FileCreateError => write!(f, "failed to create the database file"),
+                Self::FlushError => write!(f, "failed to flush the write buffer"),
+
+                Self::TempCreate => write!(f, "failed to create the temporary file"),
+                Self::TempReplace => write!(
+                    f,
+                    "failed to rename the temporary file to the database file"
+                ),
+                Self::RenameError => write!(f, "failed to rename the file"),
+            }
+        }
+    }
+
+    impl std::error::Error for TErrors {}
 
     /// Determines which log bucket a recorded operation is placed into.
     ///
@@ -347,6 +368,35 @@ pub mod shrub {
     }
 
     impl Instance {
+        /// Creates a new [`Instance`] backed by the file at `path`.
+        ///
+        /// The file is created on disk if it does not already exist. If it already
+        /// exists it is left untouched. Logging is enabled by default.
+        ///
+        /// # Errors
+        ///
+        /// Returns [`TErrors::FileCreateError`] if the file cannot be created.
+        ///
+        /// # Example
+        ///
+        /// ```no_run
+        /// use injekt::shrub::Instance;
+        ///
+        /// let mut db = Instance::new("./mydb.dat").unwrap();
+        /// db.set_key_value("name".to_string(), "Alice".to_string());
+        /// db.write_pair().unwrap();
+        /// ```
+        pub fn new(path: impl Into<String>) -> Result<Self, TErrors> {
+            Ok(Self {
+                file: KnownFile::init(path.into())?,
+                key: String::new(),
+                value: String::new(),
+                log: true,
+                logger: Logger::default(),
+                content_stale: true,
+            })
+        }
+
         /// Appends the current `key` and `value` of the instance into the in-memory
         /// content of the underlying [`KnownFile`].
         ///
@@ -383,15 +433,17 @@ pub mod shrub {
         /// assert_eq!(db.get_value(), "cat");
         /// ```
         pub fn set_key_value(&mut self, key: String, value: String) {
-            self.key = if key.len() != key.trim().len() {
-                key.trim().to_string()
-            } else {
+            let key_trimmed = key.trim();
+            self.key = if key_trimmed.len() == key.len() {
                 key
-            };
-            self.value = if value.len() != value.trim().len() {
-                value.trim().to_string()
             } else {
+                key_trimmed.to_string()
+            };
+            let value_trimmed = value.trim();
+            self.value = if value_trimmed.len() == value.len() {
                 value
+            } else {
+                value_trimmed.to_string()
             };
         }
 
@@ -409,10 +461,11 @@ pub mod shrub {
         /// assert_eq!(db.get_key(), "color");
         /// ```
         pub fn set_key(&mut self, key: String) {
-            self.key = if key.len() != key.trim().len() {
-                key.trim().to_string()
-            } else {
+            let trimmed = key.trim();
+            self.key = if trimmed.len() == key.len() {
                 key
+            } else {
+                trimmed.to_string()
             };
         }
 
@@ -430,10 +483,11 @@ pub mod shrub {
         /// assert_eq!(db.get_value(), "blue");
         /// ```
         pub fn set_value(&mut self, value: String) {
-            self.value = if value.len() != value.trim().len() {
-                value.trim().to_string()
-            } else {
+            let trimmed = value.trim();
+            self.value = if trimmed.len() == value.len() {
                 value
+            } else {
+                trimmed.to_string()
             };
         }
 
@@ -578,7 +632,7 @@ pub mod shrub {
             let content = self.file.content.clone();
             for (k, v) in content {
                 self.set_key_value(k, v);
-                self.write_pair().map_err(|_| TErrors::FileIOError)?;
+                self.write_pair()?;
             }
 
             Ok(())
@@ -741,14 +795,13 @@ pub mod shrub {
         pub fn write_pair(&mut self) -> Result<(), TErrors> {
             self.read_data()?;
 
-            if self.log {
-                self.logger.add_add((self.key.clone(), self.value.clone()));
-            }
-
             if !self.search_vec() {
                 self.file
                     .append_contents(self.key.clone(), self.value.clone());
                 self.file.create_file()?;
+                if self.log {
+                    self.logger.add_add((self.key.clone(), self.value.clone()));
+                }
             }
 
             Ok(())
@@ -790,8 +843,7 @@ pub mod shrub {
                 return Ok(());
             };
 
-            if err == TErrors::ContentsEmpty {
-                println!("contents empty");
+            if matches!(err, TErrors::ContentsEmpty) {
                 self.content_stale = false;
                 Ok(())
             } else {
@@ -901,12 +953,12 @@ pub mod shrub {
                     .add_updated((self.key.clone(), self.value.clone()));
             }
 
-            self.file.create_file()
+            self.file.create_file()?;
+            Ok(())
         }
     }
 }
 
-#[allow(dead_code)]
 pub mod file_manip {
     use std::fs::File;
     use std::io::BufWriter;
@@ -1088,14 +1140,8 @@ pub mod file_manip {
         /// db.write_pair().unwrap(); // content is now on disk
         /// ```
         pub(crate) fn create_file(&self) -> Result<(), TErrors> {
-            self.run_temp().map_err(|err| {
-                println!("Error: {err:?}");
-                TErrors::TempCreate
-            })?;
-            self.replace_temp().map_err(|err| {
-                println!("Error: {err:?}");
-                TErrors::TempReplace
-            })?;
+            self.run_temp().map_err(|_| TErrors::TempCreate)?;
+            self.replace_temp().map_err(|_| TErrors::TempReplace)?;
             Ok(())
         }
 
