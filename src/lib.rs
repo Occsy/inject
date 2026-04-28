@@ -115,7 +115,7 @@ pub mod shrub {
     ///
     /// let mut logger = Logger::default();
     /// logger.add_add(("key".to_string(), "value".to_string()));
-    /// assert_eq!(logger.get_added(), vec![("key".to_string(), "value".to_string())]);
+    /// assert_eq!(logger.get_added(), [("key".to_string(), "value".to_string())]);
     /// ```
     pub struct Logger {
         read: Vec<(String, String)>,
@@ -149,7 +149,7 @@ pub mod shrub {
     }
 
     impl Logger {
-        /// Returns a clone of all key-value pairs that were read during this session.
+        /// Returns a slice of all key-value pairs that were read during this session.
         ///
         /// # Example
         ///
@@ -158,13 +158,13 @@ pub mod shrub {
         ///
         /// let mut logger = Logger::default();
         /// logger.add_read(("name".to_string(), "Alice".to_string()));
-        /// assert_eq!(logger.get_read(), vec![("name".to_string(), "Alice".to_string())]);
+        /// assert_eq!(logger.get_read(), [("name".to_string(), "Alice".to_string())]);
         /// ```
-        pub fn get_read(&self) -> Vec<(String, String)> {
-            self.read.clone()
+        pub fn get_read(&self) -> &[(String, String)] {
+            &self.read
         }
 
-        /// Returns a clone of all key-value pairs that were added during this session.
+        /// Returns a slice of all key-value pairs that were added during this session.
         ///
         /// # Example
         ///
@@ -173,13 +173,13 @@ pub mod shrub {
         ///
         /// let mut logger = Logger::default();
         /// logger.add_add(("age".to_string(), "30".to_string()));
-        /// assert_eq!(logger.get_added(), vec![("age".to_string(), "30".to_string())]);
+        /// assert_eq!(logger.get_added(), [("age".to_string(), "30".to_string())]);
         /// ```
-        pub fn get_added(&self) -> Vec<(String, String)> {
-            self.added.clone()
+        pub fn get_added(&self) -> &[(String, String)] {
+            &self.added
         }
 
-        /// Returns a clone of all key-value pairs that were deleted during this session.
+        /// Returns a slice of all key-value pairs that were deleted during this session.
         ///
         /// # Example
         ///
@@ -188,13 +188,13 @@ pub mod shrub {
         ///
         /// let mut logger = Logger::default();
         /// logger.add_deleted(("city".to_string(), "Madrid".to_string()));
-        /// assert_eq!(logger.get_deleted(), vec![("city".to_string(), "Madrid".to_string())]);
+        /// assert_eq!(logger.get_deleted(), [("city".to_string(), "Madrid".to_string())]);
         /// ```
-        pub fn get_deleted(&self) -> Vec<(String, String)> {
-            self.deleted.clone()
+        pub fn get_deleted(&self) -> &[(String, String)] {
+            &self.deleted
         }
 
-        /// Returns a clone of all key-value pairs that were updated during this session.
+        /// Returns a slice of all key-value pairs that were updated during this session.
         ///
         /// # Example
         ///
@@ -203,10 +203,10 @@ pub mod shrub {
         ///
         /// let mut logger = Logger::default();
         /// logger.add_updated(("score".to_string(), "99".to_string()));
-        /// assert_eq!(logger.get_updated(), vec![("score".to_string(), "99".to_string())]);
+        /// assert_eq!(logger.get_updated(), [("score".to_string(), "99".to_string())]);
         /// ```
-        pub fn get_updated(&self) -> Vec<(String, String)> {
-            self.updated.clone()
+        pub fn get_updated(&self) -> &[(String, String)] {
+            &self.updated
         }
 
         /// Records a key-value pair as having been read.
@@ -336,8 +336,8 @@ pub mod shrub {
             Self {
                 file: KnownFile::init("./default.dat".to_string())
                     .expect("Unable to initiate KnownFile"),
-                key: "".to_string(),
-                value: "".to_string(),
+                key: String::new(),
+                value: String::new(),
                 log: true,
                 logger: Logger::default(),
             }
@@ -361,18 +361,14 @@ pub mod shrub {
         /// assert_eq!(db.get_file().get_contents().len(), 1);
         /// ```
         pub fn kv_to_contents(&mut self) {
-            let mut temp_file = self.get_file();
-
-            let mut temp_contents: Vec<(String, String)> = temp_file.get_contents();
-
-            temp_contents.push((self.get_key(), self.get_value()));
-
-            temp_file.set_contents(temp_contents);
-
-            self.set_file(temp_file);
+            self.file
+                .content
+                .push((self.key.clone(), self.value.clone()));
         }
 
         /// Sets both the active `key` and `value` in a single call.
+        ///
+        /// Leading and trailing whitespace is stripped from both before storing.
         ///
         /// # Example
         ///
@@ -385,11 +381,13 @@ pub mod shrub {
         /// assert_eq!(db.get_value(), "cat");
         /// ```
         pub fn set_key_value(&mut self, key: String, value: String) {
-            self.key = key;
-            self.value = value;
+            self.key = key.trim().to_string();
+            self.value = value.trim().to_string();
         }
 
         /// Sets the active key used by the next database operation.
+        ///
+        /// Leading and trailing whitespace is stripped before storing.
         ///
         /// # Example
         ///
@@ -401,10 +399,12 @@ pub mod shrub {
         /// assert_eq!(db.get_key(), "color");
         /// ```
         pub fn set_key(&mut self, key: String) {
-            self.key = key;
+            self.key = key.trim().to_string();
         }
 
         /// Sets the active value used by the next database operation.
+        ///
+        /// Leading and trailing whitespace is stripped before storing.
         ///
         /// # Example
         ///
@@ -416,7 +416,7 @@ pub mod shrub {
         /// assert_eq!(db.get_value(), "blue");
         /// ```
         pub fn set_value(&mut self, value: String) {
-            self.value = value;
+            self.value = value.trim().to_string();
         }
 
         /// Sets the file path directly on the underlying [`KnownFile`].
@@ -455,7 +455,7 @@ pub mod shrub {
             self.file.content = content;
         }
 
-        /// Returns a copy of the file path stored in the underlying [`KnownFile`].
+        /// Returns a reference to the file path stored in the underlying [`KnownFile`].
         ///
         /// # Example
         ///
@@ -465,13 +465,13 @@ pub mod shrub {
         /// let db = Instance::default();
         /// assert_eq!(db.get_file_path(), "./default.dat");
         /// ```
-        pub fn get_file_path(&self) -> String {
-            self.file.path.to_string()
+        pub fn get_file_path(&self) -> &str {
+            &self.file.path
         }
 
-        /// Returns a clone of the in-memory content vector from the underlying [`KnownFile`].
+        /// Returns a slice of the in-memory content from the underlying [`KnownFile`].
         ///
-        /// Each element is a `(key, value)` tuple. The vector reflects the last state loaded
+        /// Each element is a `(key, value)` tuple. The slice reflects the last state loaded
         /// from disk (via [`Instance::read_data`]) plus any pending in-memory changes.
         ///
         /// # Example
@@ -483,8 +483,8 @@ pub mod shrub {
         /// db.set_file_content(vec![("lang".to_string(), "Rust".to_string())]);
         /// assert_eq!(db.get_file_content()[0].0, "lang");
         /// ```
-        pub fn get_file_content(&self) -> Vec<(String, String)> {
-            self.file.content.clone()
+        pub fn get_file_content(&self) -> &[(String, String)] {
+            &self.file.content
         }
 
         /// Deletes the database file at the current path from disk.
@@ -545,18 +545,19 @@ pub mod shrub {
         /// db.write_file_contents().unwrap();
         /// ```
         pub fn write_file_contents(&mut self) -> Result<(), TErrors> {
-            if !self.get_key().is_empty() {
-                self.file.content.push((self.get_key(), self.get_value()));
+            if !self.key.is_empty() {
+                self.file
+                    .content
+                    .push((self.key.clone(), self.value.clone()));
             }
 
-            self.get_file_content().into_iter().for_each(|f| {
-                self.set_key_value(f.0.clone(), f.1.clone());
-                self.write_pair()
-                    .map_err(|_| {
-                        return TErrors::FileIOError;
-                    })
-                    .unwrap();
-            });
+            // Clone once here — necessary because write_pair calls read_data which
+            // reloads self.file.content from disk, invalidating any live borrow.
+            let content = self.file.content.clone();
+            for (k, v) in content {
+                self.set_key_value(k, v);
+                self.write_pair().map_err(|_| TErrors::FileIOError)?;
+            }
 
             Ok(())
         }
@@ -624,7 +625,7 @@ pub mod shrub {
             self.logger = logger;
         }
 
-        /// Returns a snapshot of the internal [`Logger`].
+        /// Returns a reference to the internal [`Logger`].
         ///
         /// # Example
         ///
@@ -638,16 +639,11 @@ pub mod shrub {
         /// let logger = db.get_logger();
         /// assert_eq!(logger.get_added().len(), 1);
         /// ```
-        pub fn get_logger(&self) -> Logger {
-            Logger {
-                read: self.logger.get_read(),
-                added: self.logger.get_added(),
-                deleted: self.logger.get_deleted(),
-                updated: self.logger.get_updated(),
-            }
+        pub fn get_logger(&self) -> &Logger {
+            &self.logger
         }
 
-        /// Returns a copy of the active key.
+        /// Returns a reference to the active key.
         ///
         /// # Example
         ///
@@ -658,11 +654,11 @@ pub mod shrub {
         /// db.set_key("planet".to_string());
         /// assert_eq!(db.get_key(), "planet");
         /// ```
-        pub fn get_key(&self) -> String {
-            String::from(&self.key)
+        pub fn get_key(&self) -> &str {
+            &self.key
         }
 
-        /// Returns a copy of the active value.
+        /// Returns a reference to the active value.
         ///
         /// # Example
         ///
@@ -673,15 +669,11 @@ pub mod shrub {
         /// db.set_value("Earth".to_string());
         /// assert_eq!(db.get_value(), "Earth");
         /// ```
-        pub fn get_value(&self) -> String {
-            String::from(&self.value)
+        pub fn get_value(&self) -> &str {
+            &self.value
         }
 
-        /// Returns a snapshot of the underlying [`KnownFile`].
-        ///
-        /// The snapshot shares the same `path` and `content` but is an independent
-        /// copy, so mutations to it do not affect the instance until [`Instance::set_file`]
-        /// is called.
+        /// Returns a reference to the underlying [`KnownFile`].
         ///
         /// # Example
         ///
@@ -692,11 +684,8 @@ pub mod shrub {
         /// let file = db.get_file();
         /// assert_eq!(file.get_path(), "./default.dat");
         /// ```
-        pub fn get_file(&self) -> KnownFile {
-            KnownFile {
-                path: self.file.get_path(),
-                content: self.file.get_contents(),
-            }
+        pub fn get_file(&self) -> &KnownFile {
+            &self.file
         }
 
         /// Writes the active key-value pair to the database file.
@@ -731,11 +720,12 @@ pub mod shrub {
             self.read_data()?;
 
             if self.log {
-                self.logger.add_add((self.get_key(), self.get_value()));
+                self.logger.add_add((self.key.clone(), self.value.clone()));
             }
 
             if !self.search_vec() {
-                self.file.append_contents(self.get_key(), self.get_value());
+                self.file
+                    .append_contents(self.key.clone(), self.value.clone());
                 self.file.create_file()?;
             }
 
@@ -761,11 +751,7 @@ pub mod shrub {
         /// // db.get_file().get_contents() now reflects what is on disk
         /// ```
         pub fn read_data(&mut self) -> Result<(), TErrors> {
-            let file_path = self.file.get_path();
-
-            let wrapped_path: &Path = &Path::new(&file_path);
-
-            if !wrapped_path.exists() {
+            if !Path::new(&self.file.path).exists() {
                 self.file.create_file()?;
                 return Ok(());
             }
@@ -776,27 +762,18 @@ pub mod shrub {
 
             if err == TErrors::ContentsEmpty {
                 println!("contents empty");
-                return Ok(());
+                Ok(())
             } else {
-                return Err(TErrors::ReadBytesError);
+                Err(TErrors::ReadBytesError)
             }
         }
 
         /// Returns `true` if the active key already exists in the in-memory content.
         ///
-        /// Comparison is done after trimming whitespace from both sides so that
-        /// keys parsed from disk (which may have surrounding spaces) are matched
-        /// correctly.
+        /// All keys are pre-trimmed on entry via the setter methods, so a direct
+        /// equality comparison is sufficient.
         fn search_vec(&self) -> bool {
-            self.file
-                .get_contents()
-                .iter()
-                .any(|(x, _y)| Self::trim_str(x.clone()) == Self::trim_str(self.get_key()))
-        }
-
-        /// Trims leading and trailing whitespace from a `String`.
-        fn trim_str(str: String) -> String {
-            str.trim().to_string()
+            self.file.content.iter().any(|(x, _)| x == &self.key)
         }
 
         /// Deletes the key-value pair identified by the active key from the database.
@@ -828,30 +805,19 @@ pub mod shrub {
         pub fn delete_pair(&mut self) -> Result<(), TErrors> {
             self.read_data()?;
 
-            if self.get_log() {
-                let inner_contents = self.get_file().get_contents();
-                self.logger.add_deleted((
-                    self.get_key(),
-                    if inner_contents.is_empty() {
-                        "DB is empty".to_string()
-                    } else {
-                        let found_key = inner_contents
-                            .into_iter()
-                            .filter(|(x, _y)| {
-                                Self::trim_str(String::from(x)) == Self::trim_str(self.get_key())
-                            })
-                            .collect::<Vec<(String, String)>>();
-                        if found_key.is_empty() {
-                            format!("DB read. Does not contain: {}", self.get_key())
-                        } else {
-                            String::from(&found_key[0].1)
-                        }
-                    },
-                ));
+            if self.log {
+                let value_to_log = if self.file.content.is_empty() {
+                    "DB is empty".to_string()
+                } else {
+                    match self.file.content.iter().find(|(x, _)| x == &self.key) {
+                        Some((_, v)) => v.clone(),
+                        None => format!("DB read. Does not contain: {}", self.key),
+                    }
+                };
+                self.logger.add_deleted((self.key.clone(), value_to_log));
             }
 
-            self.file.remove_contents(self.get_key());
-
+            self.file.remove_contents(&self.key);
             self.file.create_file()?;
 
             Ok(())
@@ -892,13 +858,16 @@ pub mod shrub {
             self.read_data()?;
 
             if self.search_vec() {
-                self.file.update_by_key(self.get_key(), self.get_value())?;
+                self.file
+                    .update_by_key(self.key.clone(), self.value.clone())?;
             } else {
-                self.file.append_contents(self.get_key(), self.get_value());
+                self.file
+                    .append_contents(self.key.clone(), self.value.clone());
             }
 
-            if self.get_log() {
-                self.logger.add_updated((self.get_key(), self.get_value()));
+            if self.log {
+                self.logger
+                    .add_updated((self.key.clone(), self.value.clone()));
             }
 
             self.file.create_file()
@@ -982,7 +951,7 @@ pub mod file_manip {
         /// db.get_file().blank().unwrap(); // file is now removed from disk
         /// ```
         pub fn blank(&self) -> Result<(), TErrors> {
-            std::fs::remove_file(String::from(&self.path)).map_err(|_| TErrors::FileIOError)
+            std::fs::remove_file(&self.path).map_err(|_| TErrors::FileIOError)
         }
 
         /// Clears the in-memory content vector without touching the file on disk.
@@ -998,7 +967,7 @@ pub mod file_manip {
         /// assert!(kf.get_contents().is_empty());
         /// ```
         pub fn truncate_contents(&mut self) {
-            self.set_contents(Vec::new());
+            self.content.clear();
         }
 
         /// Writes the current in-memory content to a `.tmp` file alongside the `.dat`.
@@ -1023,23 +992,19 @@ pub mod file_manip {
             wrapped_path = new_ext.as_path();
 
             let temp_file: File = File::create_new(wrapped_path)
-                .map_err(|_| {
-                    return TErrors::FileCreateError;
-                })
+                .map_err(|_| TErrors::FileCreateError)
                 .unwrap_or(
                     std::fs::OpenOptions::new()
                         .read(true)
                         .write(true)
                         .truncate(true)
                         .open(wrapped_path)
-                        .map_err(|_| {
-                            return TErrors::FileIOError;
-                        })?,
+                        .map_err(|_| TErrors::FileIOError)?,
                 );
 
             let mut writer = BufWriter::new(temp_file);
 
-            for (key, val) in self.get_contents() {
+            for (key, val) in &self.content {
                 // Serialise each key-value pair in binary length-prefixed format.
                 let key_bytes = key.as_bytes();
                 let val_bytes = val.as_bytes();
@@ -1123,11 +1088,11 @@ pub mod file_manip {
         pub(crate) fn create_file(&self) -> Result<(), TErrors> {
             self.run_temp().map_err(|err| {
                 println!("Error: {err:?}");
-                return TErrors::TempCreate;
+                TErrors::TempCreate
             })?;
             self.replace_temp().map_err(|err| {
                 println!("Error: {err:?}");
-                return TErrors::TempReplace;
+                TErrors::TempReplace
             })?;
             Ok(())
         }
@@ -1214,7 +1179,7 @@ pub mod file_manip {
                 parsed_content.push((key, value));
             }
 
-            self.truncate_contents();
+            self.content.clear();
             for (key, value) in parsed_content {
                 self.append_contents(key, value);
             }
@@ -1222,7 +1187,7 @@ pub mod file_manip {
             Ok(())
         }
 
-        /// Returns a copy of the file path.
+        /// Returns a reference to the file path.
         ///
         /// # Example
         ///
@@ -1232,8 +1197,8 @@ pub mod file_manip {
         /// let kf = KnownFile { path: "./mydb.dat".to_string(), content: Vec::new() };
         /// assert_eq!(kf.get_path(), "./mydb.dat");
         /// ```
-        pub fn get_path(&self) -> String {
-            String::from(&self.path)
+        pub fn get_path(&self) -> &str {
+            &self.path
         }
 
         /// Replaces the stored file path.
@@ -1253,7 +1218,7 @@ pub mod file_manip {
             self.path = path;
         }
 
-        /// Returns a clone of the full in-memory content vector.
+        /// Returns a slice of the full in-memory content vector.
         ///
         /// # Example
         ///
@@ -1262,10 +1227,10 @@ pub mod file_manip {
         ///
         /// let mut kf = KnownFile { path: "./data.dat".to_string(), content: Vec::new() };
         /// kf.append_contents("a".to_string(), "1".to_string());
-        /// assert_eq!(kf.get_contents(), vec![("a".to_string(), "1".to_string())]);
+        /// assert_eq!(kf.get_contents(), [("a".to_string(), "1".to_string())]);
         /// ```
-        pub fn get_contents(&self) -> Vec<(String, String)> {
-            self.content.clone()
+        pub fn get_contents(&self) -> &[(String, String)] {
+            &self.content
         }
 
         /// Replaces the entire in-memory content vector.
@@ -1297,15 +1262,10 @@ pub mod file_manip {
         /// assert_eq!(kf.get_contents().len(), 1);
         /// ```
         pub fn append_contents(&mut self, key: String, value: String) {
-            let mut temp_vec = self.content.clone();
-
-            temp_vec.push((key, value));
-
-            self.set_contents(temp_vec);
+            self.content.push((key, value));
         }
 
-        /// Removes all entries whose key matches `key` (after trimming whitespace)
-        /// from the in-memory content.
+        /// Removes all entries whose key matches `key` from the in-memory content.
         ///
         /// This does **not** write to disk. Call [`KnownFile::create_file`] to persist.
         ///
@@ -1317,26 +1277,16 @@ pub mod file_manip {
         /// let mut kf = KnownFile { path: "./data.dat".to_string(), content: Vec::new() };
         /// kf.append_contents("keep".to_string(), "this".to_string());
         /// kf.append_contents("remove".to_string(), "me".to_string());
-        /// kf.remove_contents("remove".to_string());
+        /// kf.remove_contents("remove");
         /// assert_eq!(kf.get_contents().len(), 1);
         /// assert_eq!(kf.get_contents()[0].0, "keep");
         /// ```
-        pub fn remove_contents(&mut self, key: String) {
-            let trimmed_key = key.trim().to_string();
-            let filtered_content: Vec<(String, String)> = self
-                .get_contents()
-                .into_iter()
-                .filter(|(x, _y)| x.trim().to_string() != trimmed_key)
-                .collect::<Vec<(String, String)>>();
-
-            self.set_contents(filtered_content);
+        pub fn remove_contents(&mut self, key: &str) {
+            self.content.retain(|(x, _)| x != key);
         }
 
         /// Updates the value of an existing key in-place, preserving its position
-        /// in the content vector.
-        ///
-        /// The key lookup is done after trimming whitespace so keys read from disk
-        /// are matched correctly. If the key does not exist,
+        /// in the content vector. If the key does not exist,
         /// [`TErrors::IndexError`] is returned.
         ///
         /// This does **not** write to disk. Call [`KnownFile::create_file`] to persist.
@@ -1356,21 +1306,11 @@ pub mod file_manip {
         /// assert_eq!(kf.get_contents()[0].1, "99");
         /// ```
         pub fn update_by_key(&mut self, key: String, new_value: String) -> Result<(), TErrors> {
-            let trimmed_key = key.trim().to_string();
-
-            let Some(key_index) = self
-                .get_contents()
-                .iter()
-                .position(|x| x.0.trim() == trimmed_key)
-            else {
+            let Some(key_index) = self.content.iter().position(|x| x.0 == key) else {
                 return Err(TErrors::IndexError);
             };
 
-            let mut inner_content: Vec<(String, String)> = self.get_contents();
-
-            inner_content[key_index] = (key, new_value);
-
-            self.set_contents(inner_content);
+            self.content[key_index] = (key, new_value);
 
             Ok(())
         }

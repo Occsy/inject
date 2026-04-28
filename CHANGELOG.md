@@ -7,6 +7,54 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ---
 
+## [1.1.0] - 2026-04-27
+
+### Breaking Changes
+
+- All getter methods now return references instead of owned values; callers that need an owned copy must call `.to_owned()` / `.clone()` explicitly:
+  - `Instance::get_key()`: `String` → `&str`
+  - `Instance::get_value()`: `String` → `&str`
+  - `Instance::get_file_path()`: `String` → `&str`
+  - `Instance::get_file_content()`: `Vec<(String, String)>` → `&[(String, String)]`
+  - `Instance::get_file()`: `KnownFile` → `&KnownFile`
+  - `Instance::get_logger()`: `Logger` → `&Logger`
+  - `KnownFile::get_path()`: `String` → `&str`
+  - `KnownFile::get_contents()`: `Vec<(String, String)>` → `&[(String, String)]`
+  - `Logger::get_read()`: `Vec<(String, String)>` → `&[(String, String)]`
+  - `Logger::get_added()`: `Vec<(String, String)>` → `&[(String, String)]`
+  - `Logger::get_deleted()`: `Vec<(String, String)>` → `&[(String, String)]`
+  - `Logger::get_updated()`: `Vec<(String, String)>` → `&[(String, String)]`
+- `KnownFile::remove_contents()`: parameter changed from `String` to `&str`
+
+### Performance
+
+- In-memory allocation count per operation reduced from **O(N)** to **O(1)** — costs no longer scale with the number of entries in the database
+- `run_temp`: eliminated full content `Vec` clone on every call; now iterates `&self.content` directly — this affected every single write, update, and delete operation
+- `search_vec`: eliminated two `String` allocations per iteration (via `trim_str`) and one full `Vec` clone; now uses a direct reference equality check with zero allocations
+- `append_contents`: eliminated full `Vec` clone on every call; now calls `Vec::push` directly
+- `remove_contents`: eliminated full `Vec` clone; now uses `Vec::retain` in-place
+- `update_by_key`: eliminated two full `Vec` clones; now indexes `self.content` directly
+- `kv_to_contents`: eliminated `KnownFile` clone and full content `Vec` clone; collapsed to a single `Vec::push`
+- `delete_pair`: eliminated full `KnownFile` clone and full content `Vec` clone for the logging path; now uses `Iterator::find` with one `String` clone for the matched value only
+- `blank`: eliminated a `String::from` clone; `remove_file` now receives `&self.path` directly
+- `read_data`: eliminated a `get_path()` clone; path is now accessed as a field reference inline
+- `write_file_contents`: replaced implicit per-item clones with one explicit `Vec::clone` before the loop; items are moved out of the owned `Vec` so no per-iteration clones are needed
+
+### Changed
+
+- `set_key_value`, `set_key`, and `set_value` now strip leading and trailing whitespace from inputs before storing — all keys and values are pre-normalised on entry, removing the need to trim at comparison time
+- `search_vec`, `delete_pair` filter, `remove_contents`, and `update_by_key` updated to use direct equality now that keys are guaranteed pre-trimmed
+- `truncate_contents`: replaced `set_contents(Vec::new())` with `Vec::clear()`
+- `write_file_contents`: replaced `for_each` closure with a `for` loop using `?` for error propagation
+- Removed `trim_str` private helper — no callers remained after normalization was moved to the setters
+- Updated doc comments on all getter methods to reflect reference return types
+- Updated `search_vec` doc comment: normalization-on-entry approach documented; trim mention removed
+- Updated `remove_contents` doc comment: removed stale "after trimming whitespace" note
+- Updated `update_by_key` doc comment: removed stale "after trimming whitespace" note
+- Updated `README.md` installation version from `1.0.2` to `1.1.0` and revised API table descriptions to reflect reference-returning getters and the `&str` parameter on `remove_contents`
+
+---
+
 ## [1.0.2] - 2026-04-27
 
 ### Added

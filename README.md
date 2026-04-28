@@ -21,7 +21,7 @@ Add the following to your `Cargo.toml`:
 
 ```toml
 [dependencies]
-injekt = { version = "1.0.2" }
+injekt = { version = "1.1.0" }
 ```
 
 ---
@@ -59,27 +59,27 @@ The main entry point for all database operations.
 | Method | Description |
 |--------|-------------|
 | `Instance::default()` | Creates an instance backed by `./default.dat` |
-| `set_key_value(key, value)` | Sets the active key and value |
-| `set_key(key)` | Sets only the active key |
-| `set_value(value)` | Sets only the active value |
+| `set_key_value(key, value)` | Sets the active key and value (leading/trailing whitespace is stripped) |
+| `set_key(key)` | Sets only the active key (leading/trailing whitespace is stripped) |
+| `set_value(value)` | Sets only the active value (leading/trailing whitespace is stripped) |
 | `kv_to_contents()` | Appends the active key-value pair to the in-memory content (does not write to disk) |
 | `write_pair()` | Writes the active key-value pair to disk (skips if key exists) |
 | `update_pair()` | Updates an existing key, or inserts it if it does not exist |
 | `delete_pair()` | Deletes the entry matching the active key |
 | `read_data()` | Reads the file from disk into memory |
-| `get_key()` | Returns a copy of the active key |
-| `get_value()` | Returns a copy of the active value |
-| `get_file()` | Returns a snapshot of the underlying `KnownFile` |
+| `get_key()` | Returns a `&str` reference to the active key |
+| `get_value()` | Returns a `&str` reference to the active value |
+| `get_file()` | Returns a `&KnownFile` reference to the underlying file handle |
 | `set_file(file)` | Replaces the underlying `KnownFile` |
-| `get_file_path()` | Returns the file path from the underlying `KnownFile` |
+| `get_file_path()` | Returns a `&str` reference to the file path |
 | `set_file_path(path)` | Sets the file path on the underlying `KnownFile` (does not move the file on disk) |
-| `get_file_content()` | Returns a clone of the in-memory content vector |
+| `get_file_content()` | Returns a `&[(String, String)]` slice of the in-memory content |
 | `set_file_content(vec)` | Replaces the in-memory content vector directly |
 | `file_blank()` | Deletes the database file from disk (in-memory content is not cleared) |
 | `write_file_contents()` | Persists every entry in the in-memory content to disk via `write_pair`, skipping duplicates |
 | `set_log(bool)` | Enables or disables operation logging |
 | `get_log()` | Returns whether logging is enabled |
-| `get_logger()` | Returns a snapshot of the internal `Logger` |
+| `get_logger()` | Returns a `&Logger` reference to the internal logger |
 | `set_logger(logger)` | Replaces the internal logger |
 
 ---
@@ -90,10 +90,10 @@ Tracks every operation performed during a session, separated by type.
 
 | Method | Description |
 |--------|-------------|
-| `get_read()` | Returns all pairs that were read |
-| `get_added()` | Returns all pairs that were added |
-| `get_deleted()` | Returns all pairs that were deleted |
-| `get_updated()` | Returns all pairs that were updated |
+| `get_read()` | Returns a `&[(String, String)]` slice of all pairs that were read |
+| `get_added()` | Returns a `&[(String, String)]` slice of all pairs that were added |
+| `get_deleted()` | Returns a `&[(String, String)]` slice of all pairs that were deleted |
+| `get_updated()` | Returns a `&[(String, String)]` slice of all pairs that were updated |
 | `add_read(pair)` | Records a pair as having been read |
 | `add_add(pair)` | Records a pair as having been added |
 | `add_deleted(pair)` | Records a pair as having been deleted |
@@ -108,12 +108,12 @@ Low-level file handle. You normally interact with this through `Instance`, but i
 
 | Method | Description |
 |--------|-------------|
-| `get_path()` | Returns the file path |
+| `get_path()` | Returns a `&str` reference to the file path |
 | `set_path(path)` | Updates the stored path (does not move the file on disk) |
-| `get_contents()` | Returns a clone of the in-memory content vector |
+| `get_contents()` | Returns a `&[(String, String)]` slice of the in-memory content |
 | `set_contents(vec)` | Replaces the in-memory content vector |
 | `append_contents(key, value)` | Adds a pair to the in-memory content |
-| `remove_contents(key)` | Removes all entries matching the key |
+| `remove_contents(key)` | Removes all entries matching the key (`key` is `&str`) |
 | `update_by_key(key, value)` | Updates an existing key's value in-place |
 | `truncate_contents()` | Clears the in-memory content |
 | `blank()` | Deletes the file from disk |
