@@ -313,6 +313,7 @@ pub mod shrub {
         value: String,
         log: bool,
         logger: Logger,
+        content_stale: bool,
     }
 
     impl Default for Instance {
@@ -340,6 +341,7 @@ pub mod shrub {
                 value: String::new(),
                 log: true,
                 logger: Logger::default(),
+                content_stale: true,
             }
         }
     }
@@ -381,8 +383,16 @@ pub mod shrub {
         /// assert_eq!(db.get_value(), "cat");
         /// ```
         pub fn set_key_value(&mut self, key: String, value: String) {
-            self.key = key.trim().to_string();
-            self.value = value.trim().to_string();
+            self.key = if key.len() != key.trim().len() {
+                key.trim().to_string()
+            } else {
+                key
+            };
+            self.value = if value.len() != value.trim().len() {
+                value.trim().to_string()
+            } else {
+                value
+            };
         }
 
         /// Sets the active key used by the next database operation.
@@ -399,7 +409,11 @@ pub mod shrub {
         /// assert_eq!(db.get_key(), "color");
         /// ```
         pub fn set_key(&mut self, key: String) {
-            self.key = key.trim().to_string();
+            self.key = if key.len() != key.trim().len() {
+                key.trim().to_string()
+            } else {
+                key
+            };
         }
 
         /// Sets the active value used by the next database operation.
@@ -416,7 +430,11 @@ pub mod shrub {
         /// assert_eq!(db.get_value(), "blue");
         /// ```
         pub fn set_value(&mut self, value: String) {
-            self.value = value.trim().to_string();
+            self.value = if value.len() != value.trim().len() {
+                value.trim().to_string()
+            } else {
+                value
+            };
         }
 
         /// Sets the file path directly on the underlying [`KnownFile`].
@@ -512,7 +530,11 @@ pub mod shrub {
         /// db.file_blank().unwrap();
         /// ```
         pub fn file_blank(&mut self) -> Result<(), TErrors> {
-            self.file.blank()
+            let result = self.file.blank();
+            if result.is_ok() {
+                self.content_stale = true;
+            }
+            result
         }
 
         /// Persists the current in-memory content to disk by calling [`Instance::write_pair`]
@@ -734,6 +756,8 @@ pub mod shrub {
 
         /// Reads the database file from disk and updates the in-memory content.
         ///
+        /// If the in-memory content is already current (i.e. the instance has not
+        /// been invalidated since the last read or write), this is a no-op.
         /// If the file does not exist it is created as an empty file. If the file
         /// exists but is empty, a message is printed and `Ok(())` is returned.
         ///
@@ -751,17 +775,24 @@ pub mod shrub {
         /// // db.get_file().get_contents() now reflects what is on disk
         /// ```
         pub fn read_data(&mut self) -> Result<(), TErrors> {
+            if !self.content_stale {
+                return Ok(());
+            }
+
             if !Path::new(&self.file.path).exists() {
                 self.file.create_file()?;
+                self.content_stale = false;
                 return Ok(());
             }
 
             let Err(err) = self.file.read_file() else {
+                self.content_stale = false;
                 return Ok(());
             };
 
             if err == TErrors::ContentsEmpty {
                 println!("contents empty");
+                self.content_stale = false;
                 Ok(())
             } else {
                 Err(TErrors::ReadBytesError)
@@ -877,8 +908,7 @@ pub mod shrub {
 
 #[allow(dead_code)]
 pub mod file_manip {
-    use std::ffi::OsStr;
-    use std::fs::{File, read_dir};
+    use std::fs::File;
     use std::io::BufWriter;
     use std::io::{Read, Write};
     use std::path::Path;
@@ -991,16 +1021,12 @@ pub mod file_manip {
 
             wrapped_path = new_ext.as_path();
 
-            let temp_file: File = File::create_new(wrapped_path)
-                .map_err(|_| TErrors::FileCreateError)
-                .unwrap_or(
-                    std::fs::OpenOptions::new()
-                        .read(true)
-                        .write(true)
-                        .truncate(true)
-                        .open(wrapped_path)
-                        .map_err(|_| TErrors::FileIOError)?,
-                );
+            let temp_file = std::fs::OpenOptions::new()
+                .write(true)
+                .create(true)
+                .truncate(true)
+                .open(wrapped_path)
+                .map_err(|_| TErrors::TempCreate)?;
 
             let mut writer = BufWriter::new(temp_file);
 
@@ -1038,32 +1064,8 @@ pub mod file_manip {
         ///
         /// Returns [`TErrors`] if the directory cannot be read or a rename fails.
         fn replace_temp(&self) -> Result<(), TErrors> {
-            for files in read_dir("./").map_err(|_| TErrors::DirError)? {
-                let file = files.map_err(|_| TErrors::DirError)?;
-                if file.path().is_file() {
-                    if file
-                        .path()
-                        .extension()
-                        .unwrap_or(OsStr::new(""))
-                        .to_str()
-                        .expect("unable to convert file path to string.")
-                        .contains("tmp")
-                    {
-                        let new_ext = file.path().with_extension("dat");
-
-                        std::fs::rename(
-                            file.path().to_str().expect("Unable to convert to str"),
-                            new_ext
-                                .as_path()
-                                .to_str()
-                                .expect("Unable to convert to str"),
-                        )
-                        .map_err(|_| TErrors::RenameError)?;
-                    }
-                }
-            }
-
-            Ok(())
+            let tmp_path = Path::new(&self.path).with_extension("tmp");
+            std::fs::rename(&tmp_path, &self.path).map_err(|_| TErrors::RenameError)
         }
 
         /// Persists the in-memory content to disk.
@@ -1129,7 +1131,11 @@ pub mod file_manip {
             // Open the .dat file fresh by path to avoid stale handles after atomic renames.
             let mut fresh_file = File::open(&self.path).map_err(|_| TErrors::ReadBytesError)?;
 
-            let mut buffer: Vec<u8> = Vec::new();
+            let capacity = fresh_file
+                .metadata()
+                .map(|m| m.len() as usize)
+                .unwrap_or(256);
+            let mut buffer = Vec::with_capacity(capacity);
             fresh_file
                 .read_to_end(&mut buffer)
                 .map_err(|_| TErrors::ReadBytesError)?;
@@ -1138,8 +1144,8 @@ pub mod file_manip {
                 return Err(TErrors::ContentsEmpty);
             }
 
-            // Deserialise the binary length-prefixed format.
-            let mut parsed_content: Vec<(String, String)> = Vec::new();
+            // Deserialise the binary length-prefixed format directly into self.content.
+            self.content.clear();
             let mut cursor: usize = 0;
 
             while cursor + 4 <= buffer.len() {
@@ -1154,8 +1160,9 @@ pub mod file_manip {
                 if cursor + key_len > buffer.len() {
                     break;
                 }
-                let key = String::from_utf8(buffer[cursor..cursor + key_len].to_vec())
-                    .map_err(|_| TErrors::ReadBytesError)?;
+                let key = std::str::from_utf8(&buffer[cursor..cursor + key_len])
+                    .map_err(|_| TErrors::ReadBytesError)?
+                    .to_owned();
                 cursor += key_len;
 
                 if cursor + 4 > buffer.len() {
@@ -1172,16 +1179,12 @@ pub mod file_manip {
                 if cursor + val_len > buffer.len() {
                     break;
                 }
-                let value = String::from_utf8(buffer[cursor..cursor + val_len].to_vec())
-                    .map_err(|_| TErrors::ReadBytesError)?;
+                let value = std::str::from_utf8(&buffer[cursor..cursor + val_len])
+                    .map_err(|_| TErrors::ReadBytesError)?
+                    .to_owned();
                 cursor += val_len;
 
-                parsed_content.push((key, value));
-            }
-
-            self.content.clear();
-            for (key, value) in parsed_content {
-                self.append_contents(key, value);
+                self.content.push((key, value));
             }
 
             Ok(())

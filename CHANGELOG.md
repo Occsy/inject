@@ -7,6 +7,26 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ---
 
+## [1.2.0] - 2026-04-27
+
+### Performance
+
+- `Instance`: added `content_stale: bool` field — `read_data` now short-circuits immediately when the in-memory state is already current, eliminating all redundant disk reads within a session; a loop writing N pairs drops from N full file reads to 1
+- `read_data`: sets `content_stale = false` on every success path (file created, file read, file empty); `file_blank` sets it back to `true` so the next operation re-reads correctly
+- `run_temp`: replaced two-step `File::create_new` + `OpenOptions` fallback with a single `OpenOptions::new().write(true).create(true).truncate(true).open(...)` — one syscall instead of a potential two
+- `read_file`: eliminated the intermediate `parsed_content` staging `Vec`; records are now pushed directly into `self.content` in a single pass
+- `read_file`: buffer is now pre-sized via `metadata().len()` (falling back to 256) before `read_to_end`, avoiding repeated capacity-doubling reallocations
+- `replace_temp`: replaced full `read_dir("./")` directory scan with a direct `fs::rename` from the known `.tmp` path to the known `.dat` path — O(directory entries) work reduced to a single syscall (applied prior to this release)
+- `set_key_value`, `set_key`, `set_value`: trimming now only allocates when whitespace is actually present; clean inputs are moved directly into the field with zero allocation
+
+### Changed
+
+- Removed now-unused `std::ffi::OsStr` and `read_dir` imports left over from the old `replace_temp` directory scan
+- Updated `read_data` doc comment to document the no-op behaviour when content is already current
+- Updated `README.md` installation version from `1.1.0` to `1.2.0`
+
+---
+
 ## [1.1.0] - 2026-04-27
 
 ### Breaking Changes
