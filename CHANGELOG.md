@@ -6,6 +6,27 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ---
+## [1.2.4.5]
+
+### Revert to [1.2.3]
+
+- `write_file_contents` reverted to older version due to bug where db replaced with current content instead of having it as an append. 
+
+## [1.2.4]
+
+### Performance
+- `write_file_contents` removed write_pair from every iteration of key, value. flush applied once all values written to file. 
+
+## [1.2.3]
+
+### Error Handling
+- Added `TErrors` to all error handles. 
+
+## [1.2.2]
+
+### Error Handling
+
+- `TErrors`: implemented debug improving readable. 
 
 ## [1.2.0] - 2026-04-27
 
