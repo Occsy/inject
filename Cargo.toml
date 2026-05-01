@@ -1,6 +1,6 @@
 [package]
 name = "injekt"
-version = "1.2.5"
+version = "1.2.6"
 edition = "2024"
 description = "A library that writes to a .dat file as key, value in binary format"
 license = "MIT"

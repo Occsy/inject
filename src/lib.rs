@@ -25,9 +25,6 @@
 //! ```
 pub mod shrub {
     use crate::file_manip::KnownFile;
-    use std::fs::File;
-    use std::fs::OpenOptions;
-    use std::io::Write;
     use std::path::Path;
 
     /// All possible errors that can occur during database operations.
@@ -623,45 +620,24 @@ pub mod shrub {
         /// // Write them all to disk in one call
         /// db.write_file_contents().unwrap();
         /// ```
+        #[cfg(feature = "experimental")]
         pub fn write_file_contents(&mut self) -> Result<(), TErrors> {
+            // 1. Sync with disk to ensure we have the full current dataset
+            self.read_data()?;
+
+            // 2. If there's a new key staged in the instance, add it to the memory vector
             if !self.key.is_empty() {
-                self.file
-                    .content
-                    .push((self.key.clone(), self.value.clone()));
-            }
-
-            let mut current_file: File = OpenOptions::new()
-                .write(true)
-                .truncate(true)
-                .open(self.get_file().get_path())
-                .map_err(|_| TErrors::FileIOError)?;
-            // Clone once here — necessary because write_pair calls read_data which
-            // reloads self.file.content from disk, invalidating any live borrow.
-            let content = self.file.content.clone();
-            for (k, v) in content {
-                let key_bytes = k.as_bytes();
-                let val_bytes = v.as_bytes();
-                current_file
-                    .write_all(&(key_bytes.len() as u32).to_le_bytes())
-                    .map_err(|_| TErrors::WriteBytesError)?;
-                current_file
-                    .write_all(key_bytes)
-                    .map_err(|_| TErrors::WriteBytesError)?;
-                current_file
-                    .write_all(&(val_bytes.len() as u32).to_le_bytes())
-                    .map_err(|_| TErrors::WriteBytesError)?;
-                current_file
-                    .write_all(val_bytes)
-                    .map_err(|_| TErrors::WriteBytesError)?;
-
-                self.set_key_value(k.clone(), v.clone());
-
-                if self.log {
-                    self.logger.add_add((k, v));
+                // Optional: Check for duplicates here if you want to avoid growth
+                if !self.search_vec() {
+                    self.file
+                        .content
+                        .push((self.key.clone(), self.value.clone()));
                 }
             }
 
-            current_file.flush().map_err(|_| TErrors::FlushError)?;
+            // 3. Persist the entire vector to disk in ONE atomic operation
+            // This replaces the loop that was calling write_pair() repeatedly.
+            self.file.create_file()?;
 
             Ok(())
         }
@@ -714,7 +690,7 @@ pub mod shrub {
             self.log
         }
 
-        /// Replaces the internal [`Logger`] with the provided one.
+        /// Replaces the intaernal [`Logger`] with the provided one.
         ///
         /// # Example
         ///
@@ -824,12 +800,17 @@ pub mod shrub {
             self.read_data()?;
 
             if !self.search_vec() {
-                self.file
-                    .append_contents(self.key.clone(), self.value.clone());
-                self.file.create_file()?;
+                // 1. Log it BEFORE or INDEPENDENT of the vector update
                 if self.log {
                     self.logger.add_add((self.key.clone(), self.value.clone()));
                 }
+
+                // 2. Add to memory
+                self.file
+                    .append_contents(self.key.clone(), self.value.clone());
+
+                // 3. Write to disk
+                self.file.create_file()?;
             }
 
             Ok(())

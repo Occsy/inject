@@ -21,7 +21,7 @@ Add the following to your `Cargo.toml`:
 
 ```toml
 [dependencies]
-injekt = { version = "1.2.5" }
+injekt = { version = "1.2.6" }
 ```
 
 ---
