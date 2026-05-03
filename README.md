@@ -21,7 +21,7 @@ Add the following to your `Cargo.toml`:
 
 ```toml
 [dependencies]
-injekt = { version = "1.3.0" }
+injekt = { version = "1.3.1" }
 ```
 
 ---
@@ -58,12 +58,14 @@ The main entry point for all database operations.
 
 | Method | Description |
 |--------|-------------|
+| `init()`| Returns new instance of Instance|
 | `Instance::default()` | Creates an instance backed by `./default.dat` |
 | `set_key_value(key, value)` | Sets the active key and value (leading/trailing whitespace is stripped) |
 | `set_key(key)` | Sets only the active key (leading/trailing whitespace is stripped) |
 | `set_value(value)` | Sets only the active value (leading/trailing whitespace is stripped) |
 | `kv_to_contents()` | Appends the active key-value pair to the in-memory content (does not write to disk) |
 | `write_pair()` | Writes the active key-value pair to disk (skips if key exists) |
+| `write_all()` | Writes all contents to file |
 | `update_pair()` | Updates an existing key, or inserts it if it does not exist |
 | `delete_pair()` | Deletes the entry matching the active key |
 | `read_data()` | Reads the file from disk into memory |
@@ -90,7 +92,6 @@ Tracks every operation performed during a session, separated by type.
 
 | Method | Description |
 |--------|-------------|
-| `init()`| Returns new instance of Instance|
 | `get_read()` | Returns a `&[(String, String)]` slice of all pairs that were read |
 | `get_added()` | Returns a `&[(String, String)]` slice of all pairs that were added |
 | `get_deleted()` | Returns a `&[(String, String)]` slice of all pairs that were deleted |
