@@ -382,11 +382,11 @@ pub mod shrub {
         /// ```no_run
         /// use injekt::shrub::Instance;
         ///
-        /// let mut db = Instance::new("./mydb.dat").unwrap();
+        /// let mut db = Instance::init("./mydb.dat").unwrap();
         /// db.set_key_value("name".to_string(), "Alice".to_string());
         /// db.write_pair().unwrap();
         /// ```
-        pub fn new(path: impl Into<String>) -> Result<Self, TErrors> {
+        pub fn init(path: impl Into<String>) -> Result<Self, TErrors> {
             Ok(Self {
                 file: KnownFile::init(path.into())?,
                 key: String::new(),
@@ -991,8 +991,8 @@ pub mod file_manip {
     /// db.write_pair().unwrap();
     /// ```
     pub struct KnownFile {
-        pub path: String,
-        pub content: Vec<(String, String)>,
+        pub(crate) path: String,
+        pub(crate) content: Vec<(String, String)>,
     }
 
     impl KnownFile {
@@ -1040,7 +1040,7 @@ pub mod file_manip {
         /// let db = Instance::default();
         /// db.get_file().blank().unwrap(); // file is now removed from disk
         /// ```
-        pub fn blank(&self) -> Result<(), TErrors> {
+        pub(crate) fn blank(&self) -> Result<(), TErrors> {
             std::fs::remove_file(&self.path).map_err(|_| TErrors::FileIOError)
         }
 

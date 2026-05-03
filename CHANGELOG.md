@@ -6,6 +6,14 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ---
+## [1.3.0]
+### Functionality
+- `Instance::new` changed to `Instance::init` to match pattern seen in `KnownFile::init`
+- Scope of `KnownFile.path` changed to pub(crate)
+- Scope of `KnownFile.contents` changed to pub(crate)
+- Scope of `KnownFile::blank` changed to pub(crate)
+- updated README 
+
 ## [1.2.8]
 ### Documentation 
 - made documentation about 'write_fil_contents'

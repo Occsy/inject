@@ -21,7 +21,7 @@ Add the following to your `Cargo.toml`:
 
 ```toml
 [dependencies]
-injekt = { version = "1.2.8" }
+injekt = { version = "1.3.0" }
 ```
 
 ---
@@ -90,6 +90,7 @@ Tracks every operation performed during a session, separated by type.
 
 | Method | Description |
 |--------|-------------|
+| `init()`| Returns new instance of Instance|
 | `get_read()` | Returns a `&[(String, String)]` slice of all pairs that were read |
 | `get_added()` | Returns a `&[(String, String)]` slice of all pairs that were added |
 | `get_deleted()` | Returns a `&[(String, String)]` slice of all pairs that were deleted |
@@ -108,6 +109,7 @@ Low-level file handle. You normally interact with this through `Instance`, but i
 
 | Method | Description |
 |--------|-------------|
+| `init()` | Returns new instance of KnownFile
 | `get_path()` | Returns a `&str` reference to the file path |
 | `set_path(path)` | Updates the stored path (does not move the file on disk) |
 | `get_contents()` | Returns a `&[(String, String)]` slice of the in-memory content |
@@ -116,8 +118,6 @@ Low-level file handle. You normally interact with this through `Instance`, but i
 | `remove_contents(key)` | Removes all entries matching the key (`key` is `&str`) |
 | `update_by_key(key, value)` | Updates an existing key's value in-place |
 | `truncate_contents()` | Clears the in-memory content |
-| `blank()` | Deletes the file from disk |
-
 ---
 
 ## Error Handling
