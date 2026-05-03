@@ -964,6 +964,11 @@ pub mod shrub {
             self.file.create_file()?;
             Ok(())
         }
+
+        pub fn write_all(&mut self) -> Result<(), TErrors> {
+            self.file.create_file()?;
+            Ok(())
+        }
     }
 }
 
