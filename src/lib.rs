@@ -630,8 +630,7 @@ pub mod shrub {
                 // Optional: Check for duplicates here if you want to avoid growth
                 if !self.search_vec() {
                     self.file
-                        .content
-                        .push((self.key.clone(), self.value.clone()));
+                        .append_content(self.key.clone(), self.value.clone());
                 }
             }
 

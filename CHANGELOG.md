@@ -6,11 +6,21 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ---
+## [1.2.8]
+### Documentation 
+- made documentation about 'write_fil_contents'
+
+## [1.2.7]
+
+### Functionality 
+- `write_file_contents` sets to experiemental 
+
 ## [1.2.6]
 
 ### Funcionality
 
 - `write_file_contents` set to experimental
+
 ## [1.2.5]
 
 ### Revert to [1.2.3]
