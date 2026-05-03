@@ -591,56 +591,6 @@ pub mod shrub {
             result
         }
 
-        /// Persists the current in-memory content to disk by calling [`Instance::write_pair`]
-        /// for each entry in the content vector.
-        ///
-        /// If the active key is non-empty it is appended to the in-memory buffer before
-        /// the loop begins, so it will be included in the write when the file does not yet
-        /// exist on disk. Because [`Instance::write_pair`] internally calls
-        /// [`Instance::read_data`] (which reloads content from disk when the file already
-        /// exists), duplicate keys are automatically skipped for each entry.
-        ///
-        /// # Errors
-        ///
-        /// Returns [`TErrors`] if any individual [`Instance::write_pair`] call fails.
-        ///
-        /// # Example
-        ///
-        /// ```no_run
-        /// use injekt::shrub::Instance;
-        ///
-        /// let mut db = Instance::default();
-        ///
-        /// // Stage multiple pairs in memory
-        /// db.set_file_content(vec![
-        ///     ("username".to_string(), "alice".to_string()),
-        ///     ("language".to_string(), "Rust".to_string()),
-        /// ]);
-        ///
-        /// // Write them all to disk in one call
-        /// db.write_file_contents().unwrap();
-        /// ```
-        #[cfg(feature = "experimental")]
-        pub fn write_file_contents(&mut self) -> Result<(), TErrors> {
-            // 1. Sync with disk to ensure we have the full current dataset
-            self.read_data()?;
-
-            // 2. If there's a new key staged in the instance, add it to the memory vector
-            if !self.key.is_empty() {
-                // Optional: Check for duplicates here if you want to avoid growth
-                if !self.search_vec() {
-                    self.file
-                        .append_content(self.key.clone(), self.value.clone());
-                }
-            }
-
-            // 3. Persist the entire vector to disk in ONE atomic operation
-            // This replaces the loop that was calling write_pair() repeatedly.
-            self.file.create_file()?;
-
-            Ok(())
-        }
-
         /// Replaces the underlying [`KnownFile`] with a new one.
         ///
         /// # Example
